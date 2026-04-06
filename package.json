@@ -9,5 +9,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "Repro package for testing npm OIDC + actions/setup-node behavior"
+  "description": "Repro package for testing npm OIDC + actions/setup-node behavior",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chiranjib-swain/repro-oidc-setup-node.git"
+  }
 }
