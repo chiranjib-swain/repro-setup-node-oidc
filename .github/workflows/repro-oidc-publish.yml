@@ -18,9 +18,9 @@ jobs:
 
       # "Magic" auth wiring happens when registry-url is set
       - name: Setup Node (v4) + registry-url
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           registry-url: "https://registry.npmjs.org"
 
       - name: Debug env + npm userconfig (sanitized)
