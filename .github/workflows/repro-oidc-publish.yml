@@ -1,0 +1,60 @@
+name: Repro npm OIDC publish (setup-node v4, node 20)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Required for npm OIDC / provenance (Trusted Publisher)
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # "Magic" auth wiring happens when registry-url is set
+      - name: Setup Node (v4) + registry-url
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Debug env + npm userconfig (sanitized)
+        shell: bash
+        run: |
+          echo "Token env vars:"
+          env | sort | grep -E '^(NODE_AUTH_TOKEN|NPM_AUTH_TOKEN|NPM_TOKEN|NPM_CONFIG_PROVENANCE)=' || true
+          echo
+          f="$(npm config get userconfig)"
+          echo "npm userconfig: $f"
+          if [ -f "$f" ]; then
+            echo "----- userconfig (sanitized) -----"
+            sed -E 's/(authToken=).*/\1***redacted***/g' "$f"
+            echo "----------------------------------"
+          else
+            echo "No npm userconfig file found"
+          fi
+
+      - name: Enable provenance (OIDC)
+        shell: bash
+        run: echo "NPM_CONFIG_PROVENANCE=true" >> "$GITHUB_ENV"
+
+      # Uncomment this block to validate the workaround if token env vars appear
+      # - name: Workaround: clear token env vars
+      #   shell: bash
+      #   run: |
+      #     echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+      #     echo "NPM_AUTH_TOKEN=" >> "$GITHUB_ENV"
+      #     echo "NPM_TOKEN=" >> "$GITHUB_ENV"
+
+      - name: Bump version (required for publish)
+        shell: bash
+        run: npm version patch --no-git-tag-version
+
+      - name: Publish to npm (OIDC Trusted Publisher)
+        shell: bash
+        run: npm publish --access public

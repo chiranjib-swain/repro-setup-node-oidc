@@ -1,0 +1,13 @@
+{
+  "name": "@chiranjib-infosys/repro-oidc-setup-node",
+  "version": "0.0.2",
+  "private": false,
+  "main": "index.js",
+  "scripts": {
+    "test": "node -e \"console.log('ok')\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Repro package for testing npm OIDC + actions/setup-node behavior"
+}
