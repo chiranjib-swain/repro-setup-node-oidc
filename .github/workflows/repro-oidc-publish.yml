@@ -55,6 +55,17 @@ jobs:
         shell: bash
         run: npm version patch --no-git-tag-version
 
+      - name: Debug NODE_AUTH_TOKEN (safe)
+        shell: bash
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NODE_AUTH_TOKEN is NOT set"
+          else
+            echo "NODE_AUTH_TOKEN is set"
+            echo "length: ${#NODE_AUTH_TOKEN}"
+            echo "prefix(6): ${NODE_AUTH_TOKEN:0:6}******"
+          fi
+
       - name: Publish to npm (OIDC Trusted Publisher)
         shell: bash
         run: npm publish --access public
