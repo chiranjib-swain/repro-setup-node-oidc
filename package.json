@@ -16,6 +16,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:chiranjib-swain/repro-oidc-setup-node.git"
+    "url": "https://github.com/chiranjib-swain/repro-setup-node-oidc.git"
   }
 }
