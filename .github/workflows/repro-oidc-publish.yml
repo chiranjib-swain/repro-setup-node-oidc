@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node (v4) + registry-url
         uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          node-version: 20
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
 
       - name: Debug env + npm userconfig (sanitized)
