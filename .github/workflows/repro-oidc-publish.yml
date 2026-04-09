@@ -47,12 +47,14 @@ jobs:
         run: echo "NPM_CONFIG_PROVENANCE=true" >> "$GITHUB_ENV"
 
       # Uncomment this block to validate the workaround if token env vars appear
-      - name: Workaround clear token env vars
-        shell: bash
-        run: |
-          echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
-          echo "NPM_AUTH_TOKEN=" >> "$GITHUB_ENV"
-          echo "NPM_TOKEN=" >> "$GITHUB_ENV"
+      # - name: Workaround clear token env vars
+      #   shell: bash
+      #   run: |
+      #     echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+      #     echo "NPM_AUTH_TOKEN=" >> "$GITHUB_ENV"
+      #     echo "NPM_TOKEN=" >> "$GITHUB_ENV"
+      - name: Print NPM token (for debugging)
+        run: echo "NPM_TOKEN=$NPM_TOKEN"
 
       - name: Bump version (required for publish)
         shell: bash
