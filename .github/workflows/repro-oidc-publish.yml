@@ -20,11 +20,11 @@ jobs:
       - name: Setup Node (v4) + registry-url
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           registry-url: "https://registry.npmjs.org"
           token: ''
           
-      # - run: npm i -g npm@^11.5.1
+      - run: unset NODE_AUTH_TOKEN
 
       - name: Debug env + npm userconfig (sanitized)
         shell: bash
