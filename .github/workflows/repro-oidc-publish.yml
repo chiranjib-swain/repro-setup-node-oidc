@@ -9,8 +9,8 @@ jobs:
 
     # Required for npm OIDC / provenance (Trusted Publisher)
     permissions:
-      contents: read
-      id-token: write
+       contents: write # to be able to publish a GitHub release
+       packages: write # to be able to publish to GitHub Packages
 
     steps:
       - name: Checkout
