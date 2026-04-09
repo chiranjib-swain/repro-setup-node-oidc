@@ -18,9 +18,9 @@ jobs:
 
       # "Magic" auth wiring happens when registry-url is set
       - name: Setup Node (v4) + registry-url
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20.x'
+          node-version: '24.x'
           registry-url: "https://registry.npmjs.org"
           
           
@@ -70,7 +70,7 @@ jobs:
           fi
 
       - name: Publish to npm (OIDC Trusted Publisher)
-        shell: bash
-        run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish --access=public
