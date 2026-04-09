@@ -22,7 +22,9 @@ jobs:
         with:
           node-version: '22.x'
           registry-url: "https://registry.npmjs.org"
-          NODE_AUTH_TOKEN: ''
+          
+        env:
+          NODE_AUTH_TOKEN: '' 
           
       # - run: unset NODE_AUTH_TOKEN
 
