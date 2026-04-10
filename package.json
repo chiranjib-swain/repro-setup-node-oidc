@@ -1,6 +1,6 @@
 {
   "name": "@chiranjib-infosys/repro-oidc-setup-node",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "private": false,
   "main": "index.js",
   "scripts": {
