@@ -1,66 +1,35 @@
-name: Repro npm OIDC publish (cache enabled, npm pinned)
+name: Repro npm OIDC publish (setup-node v4, node 20)
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        npm:
-          - "11.6.2"
-          - "11.11.0"
+
+    # Required for npm OIDC / provenance (Trusted Publisher)
+    permissions:
+       contents: write # to be able to publish a GitHub release
+       id-token: write # to be able to publish to GitHub Packages
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node (setup-node v4, cache=npm)
-        uses: actions/setup-node@v4
+      # "Magic" auth wiring happens when registry-url is set
+      - name: Setup Node (v4) + registry-url
+        uses: actions/setup-node@v6
         with:
-          node-version: "24.x"
+          node-version: '24.x'
           registry-url: "https://registry.npmjs.org"
-          cache: "npm"
-
-      - name: Pin npm to ${{ matrix.npm }}
-        run: |
-          npm i -g npm@${{ matrix.npm }}
-          npm --version
-
-      - name: Enable provenance (OIDC)
+                  
+      - name: Install npm 11.6.2
+        run: npm install -g npm@11.6.2
+ 
+      - name: Bump version (required for publish)
         shell: bash
-        run: echo "NPM_CONFIG_PROVENANCE=true" >> "$GITHUB_ENV"
-
-      - name: Diagnostics
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "=== Variant: npm=${{ matrix.npm }} (cache=npm) ==="
-          node --version
-          npm --version
-          echo "NODE_AUTH_TOKEN set? $([ -n "${NODE_AUTH_TOKEN:-}" ] && echo yes || echo no)"
-          uc="$(npm config get userconfig)"
-          echo "userconfig=$uc"
-          if [ -f "$uc" ]; then
-            echo "=== user .npmrc (redacted) ==="
-            sed -e 's/_authToken=.*/_authToken=***redacted***/' "$uc"
-          fi
-
-      # Publish real only for one variant to avoid version conflicts
-      - name: Bump version (only for REAL publish)
-        if: ${{ matrix.npm == '11.11.0' }}
         run: npm version patch --no-git-tag-version
 
-      - name: Publish to npm (REAL) - npm 11.11.0
-        if: ${{ matrix.npm == '11.11.0' }}
-        run: npm publish --access=public
-
-      - name: Publish to npm (DRY RUN) - npm 11.6.2
-        if: ${{ matrix.npm != '11.11.0' }}
-        run: npm publish --access=public --dry-run
+      - name: Publish to npm (OIDC Trusted Publisher)
+        run: |
+          npm publish --access=public
