@@ -7,38 +7,43 @@ jobs:
   release:
     runs-on: ubuntu-latest
 
-    # Required for npm OIDC / provenance (Trusted Publisher)
     permissions:
-       contents: write # to be able to publish a GitHub release
-       id-token: write # to be able to publish to GitHub Packages
+      contents: write
+      id-token: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # "Magic" auth wiring happens when registry-url is set
-      - name: Setup Node (v4) + registry-url
+      - name: Setup Node (v6) + registry-url
         uses: actions/setup-node@v6
         with:
           node-version: "24.12.0"
           registry-url: "https://registry.npmjs.org"
           cache: npm
           cache-dependency-path: ./package-lock.json
-                  
-      # - name: Install npm 11.6.2
-      #   run: npm install -g npm@11.6.2
 
-        
       - name: Verify environment
         run: |
           echo "node: $(node -v)"
           echo "npm: $(npm -v)"
           echo "yarn: $(yarn -v)"
- 
-      - name: Bump version (required for publish)
-        shell: bash
-        run: npm version patch --no-git-tag-version
+
+      - name: Get current npm version
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          CURRENT_VERSION=$(npm view $PKG_NAME version || echo "0.0.0")
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Bump version from registry
+        run: |
+          NEW_VERSION=$(node -e "
+            const v = process.env.CURRENT_VERSION.split('.');
+            v[2] = Number(v[2]) + 1;
+            console.log(v.join('.'));
+          ")
+          echo "Publishing version: $NEW_VERSION"
+          npm pkg set version=$NEW_VERSION
 
       - name: Publish to npm (OIDC Trusted Publisher)
-        run: |
-          npm publish --access=public
+        run: npm publish --access=public
