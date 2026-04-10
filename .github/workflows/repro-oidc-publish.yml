@@ -1,4 +1,4 @@
-name: Repro npm OIDC publish (no cache, npm pinned)
+name: Repro npm OIDC publish (cache enabled, npm pinned)
 
 on:
   workflow_dispatch:
@@ -21,11 +21,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node (setup-node v4, no cache)
+      - name: Setup Node (setup-node v4, cache=npm)
         uses: actions/setup-node@v4
         with:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
+          cache: "npm"
 
       - name: Pin npm to ${{ matrix.npm }}
         run: |
@@ -40,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "=== Variant: npm=${{ matrix.npm }} (no cache) ==="
+          echo "=== Variant: npm=${{ matrix.npm }} (cache=npm) ==="
           node --version
           npm --version
           echo "NODE_AUTH_TOKEN set? $([ -n "${NODE_AUTH_TOKEN:-}" ] && echo yes || echo no)"
