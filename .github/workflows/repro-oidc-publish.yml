@@ -1,78 +1,65 @@
-name: Repro npm OIDC publish (setup-node v4, node 20)
+name: Repro npm OIDC publish (no cache, npm pinned)
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
-
-    # Required for npm OIDC / provenance (Trusted Publisher)
-    permissions:
-       contents: write # to be able to publish a GitHub release
-       id-token: write # to be able to publish to GitHub Packages
+    strategy:
+      fail-fast: false
+      matrix:
+        npm:
+          - "11.6.2"
+          - "11.11.0"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # "Magic" auth wiring happens when registry-url is set
-      - name: Setup Node (v4) + registry-url
-        uses: actions/setup-node@v6
+      - name: Setup Node (setup-node v4, no cache)
+        uses: actions/setup-node@v4
         with:
-          node-version: '24.x'
+          node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
-          
-          
-      # - run: unset NODE_AUTH_TOKEN
 
-      - name: Debug env + npm userconfig (sanitized)
-        shell: bash
+      - name: Pin npm to ${{ matrix.npm }}
         run: |
-          echo "Token env vars:"
-          env | sort | grep -E '^(NODE_AUTH_TOKEN|NPM_AUTH_TOKEN|NPM_TOKEN|NPM_CONFIG_PROVENANCE)=' || true
-          echo
-          f="$(npm config get userconfig)"
-          echo "npm userconfig: $f"
-          if [ -f "$f" ]; then
-            echo "----- userconfig (sanitized) -----"
-            sed -E 's/(authToken=).*/\1***redacted***/g' "$f"
-            echo "----------------------------------"
-          else
-            echo "No npm userconfig file found"
-          fi
+          npm i -g npm@${{ matrix.npm }}
+          npm --version
 
       - name: Enable provenance (OIDC)
         shell: bash
         run: echo "NPM_CONFIG_PROVENANCE=true" >> "$GITHUB_ENV"
 
-      # Uncomment this block to validate the workaround if token env vars appear
-      # - name: Workaround clear token env vars
-      #   shell: bash
-      #   run: |
-      #     echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
-      #     echo "NPM_AUTH_TOKEN=" >> "$GITHUB_ENV"
-      #     echo "NPM_TOKEN=" >> "$GITHUB_ENV"
-      - name: Print NPM token (for debugging)
-        run: echo "NPM_TOKEN=$NPM_TOKEN"
-
-      - name: Bump version (required for publish)
-        shell: bash
-        run: npm version patch --no-git-tag-version
-
-      - name: Debug NODE_AUTH_TOKEN (safe)
+      - name: Diagnostics
         shell: bash
         run: |
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "NODE_AUTH_TOKEN is NOT set"
-          else
-            echo "NODE_AUTH_TOKEN is set"
-            echo "length: ${#NODE_AUTH_TOKEN}"
-            echo "prefix(6): ${NODE_AUTH_TOKEN:0:6}******"
+          set -euo pipefail
+          echo "=== Variant: npm=${{ matrix.npm }} (no cache) ==="
+          node --version
+          npm --version
+          echo "NODE_AUTH_TOKEN set? $([ -n "${NODE_AUTH_TOKEN:-}" ] && echo yes || echo no)"
+          uc="$(npm config get userconfig)"
+          echo "userconfig=$uc"
+          if [ -f "$uc" ]; then
+            echo "=== user .npmrc (redacted) ==="
+            sed -e 's/_authToken=.*/_authToken=***redacted***/' "$uc"
           fi
 
-      - name: Publish to npm (OIDC Trusted Publisher)
-        env:
-          NODE_AUTH_TOKEN: ''
-        run: |
-          npm publish --access=public
+      # Publish real only for one variant to avoid version conflicts
+      - name: Bump version (only for REAL publish)
+        if: ${{ matrix.npm == '11.11.0' }}
+        run: npm version patch --no-git-tag-version
+
+      - name: Publish to npm (REAL) - npm 11.11.0
+        if: ${{ matrix.npm == '11.11.0' }}
+        run: npm publish --access=public
+
+      - name: Publish to npm (DRY RUN) - npm 11.6.2
+        if: ${{ matrix.npm != '11.11.0' }}
+        run: npm publish --access=public --dry-run
