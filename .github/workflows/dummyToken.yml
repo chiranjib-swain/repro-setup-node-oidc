@@ -17,14 +17,25 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           
 
-      - name: Debug .npmrc
+      - name: Debug npm config / npmrc
         run: |
-            echo "----- .npmrc -----"
-            if [ -f "$HOME/.npmrc" ]; then
-              cat "$HOME/.npmrc"
-            else
-              echo "No ~/.npmrc file present."
-            fi
+          echo "NPM_CONFIG_USERCONFIG=$NPM_CONFIG_USERCONFIG"
+          echo "----- userconfig npmrc (NPM_CONFIG_USERCONFIG) -----"
+          if [ -n "$NPM_CONFIG_USERCONFIG" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            cat "$NPM_CONFIG_USERCONFIG"
+          else
+            echo "No file at NPM_CONFIG_USERCONFIG"
+          fi
+      
+          echo "----- ~/.npmrc -----"
+          if [ -f "$HOME/.npmrc" ]; then
+            cat "$HOME/.npmrc"
+          else
+            echo "No ~/.npmrc file present."
+          fi
+      
+          echo "----- npm config get userconfig -----"
+          npm config get userconfig
 
       - name: npm install (this will fail without dummy token)
         run: npm install lodash --dry-run
