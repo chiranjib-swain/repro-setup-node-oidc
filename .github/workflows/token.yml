@@ -4,23 +4,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  no-dummy:
+  with-dummy:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # Simulate setup-node behavior EXCEPT token injection
-      - name: Create .npmrc with unresolved env
+      - name: Create .npmrc with env reference
         run: |
           echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
           echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
           echo "always-auth=true" >> ~/.npmrc
 
-      - name: Ensure NODE_AUTH_TOKEN is NOT set
+      - name: Inject dummy NODE_AUTH_TOKEN
         run: |
-          unset NODE_AUTH_TOKEN
-          echo "Token: ${NODE_AUTH_TOKEN:-<unset>}"
+          echo "NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX" >> $GITHUB_ENV
+
+      - name: Debug token
+        run: echo "Token: $NODE_AUTH_TOKEN"
 
       - name: Debug .npmrc
         run: |
@@ -30,7 +31,7 @@ jobs:
       - name: npm config list
         run: npm config list
 
-      - name: Try npm install (NO token)
+      - name: Try npm install (WITH dummy token)
         run: |
           npm init -y
           npm install lodash
