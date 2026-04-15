@@ -19,8 +19,12 @@ jobs:
 
       - name: Debug .npmrc
         run: |
-          echo "----- .npmrc -----"
-          cat ~/.npmrc
+            echo "----- .npmrc -----"
+            if [ -f "$HOME/.npmrc" ]; then
+              cat "$HOME/.npmrc"
+            else
+              echo "No ~/.npmrc file present."
+            fi
 
       - name: npm install (this will fail without dummy token)
         run: npm install lodash --dry-run
