@@ -4,20 +4,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  no-dummy:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
+      # Simulate setup-node behavior EXCEPT token injection
       - name: Create .npmrc with unresolved env
         run: |
           echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          echo "always-auth=true" >> ~/.npmrc
 
       - name: Ensure NODE_AUTH_TOKEN is NOT set
         run: |
           unset NODE_AUTH_TOKEN
           echo "Token: ${NODE_AUTH_TOKEN:-<unset>}"
 
-      - name: Run npm config list
+      - name: Debug .npmrc
+        run: |
+          echo "----- .npmrc -----"
+          cat ~/.npmrc
+
+      - name: npm config list
         run: npm config list
+
+      - name: Try npm install (NO token)
+        run: |
+          npm init -y
+          npm install lodash
