@@ -1,18 +1,22 @@
+name: test-token-override
+
 on:
   workflow_dispatch:
 
 jobs:
-  token-demo:
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
-      
+      - name: Set custom token BEFORE setup-node
+        run: echo "NODE_AUTH_TOKEN=REAL_TOKEN_123" >> $GITHUB_ENV
 
-      - name: Attempt to print token (will be masked)
-        shell: bash
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - name: Check token AFTER setup-node
         run: |
-          echo "GITHUB_TOKEN=${GITHUB_TOKEN}"
-
-
+          echo "NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN"
