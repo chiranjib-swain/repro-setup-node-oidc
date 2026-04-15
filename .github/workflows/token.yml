@@ -21,7 +21,7 @@ jobs:
           echo "NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX" >> $GITHUB_ENV
 
       - name: Debug token
-        run: echo "Token: $NODE_AUTH_TOKEN"
+        run: echo "Token-> $NODE_AUTH_TOKEN"
 
       - name: Debug .npmrc
         run: |
