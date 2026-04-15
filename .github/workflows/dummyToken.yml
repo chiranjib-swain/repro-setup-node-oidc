@@ -17,8 +17,10 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           
 
-      - name: Show .npmrc contents
-        run: cat $NPM_CONFIG_USERCONFIG
+      - name: Debug .npmrc
+        run: |
+          echo "----- .npmrc -----"
+          cat ~/.npmrc
 
       - name: npm install (this will fail without dummy token)
         run: npm install lodash --dry-run
