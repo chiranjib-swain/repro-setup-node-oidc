@@ -6,13 +6,13 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os-version }}
-    
+
     strategy:
       fail-fast: false
       matrix:
         node-version: [20, 22, 24]
         os-version: [ubuntu-latest, windows-latest, macos-latest]
-        
+
     steps:
       - uses: actions/checkout@v5
 
@@ -20,17 +20,60 @@ jobs:
         uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: ${{ matrix.node-version }}
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
+      # Create a docs-style npmrc, but do it in an OS-portable way and
+      # store it in the workspace so it exists on Windows/macOS/Linux.
       - name: Create docs-style npmrc (contains ${NODE_AUTH_TOKEN})
+        shell: bash
         run: |
-          cat > /tmp/docs-style.npmrc <<'EOF'
+          set -euo pipefail
+          cat > "$GITHUB_WORKSPACE/docs-style.npmrc" <<'EOF'
           registry=https://registry.npmjs.org/
           always-auth=true
           //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
           EOF
-          echo "----- /tmp/docs-style.npmrc -----"
-          cat /tmp/docs-style.npmrc
+          echo "----- $GITHUB_WORKSPACE/docs-style.npmrc -----"
+          cat "$GITHUB_WORKSPACE/docs-style.npmrc"
 
-      - name: yarn install 
-        run: yarn add lodash --dry-run
+      # IMPORTANT:
+      # Yarn v1 on Windows does not use /tmp, and the path separator differs.
+      # Force Yarn (and npm config resolution) to use the file we created by setting NPM_CONFIG_USERCONFIG.
+      # Also set NODE_AUTH_TOKEN so ${NODE_AUTH_TOKEN} can be substituted.
+      #
+      # Use `yarn add lodash --dry-run` (your repro) but make it deterministic:
+      # - set registry explicitly
+      # - use --non-interactive
+      # - avoid lockfile churn
+      - name: Yarn add lodash (dry-run) using docs-style npmrc
+        shell: bash
+        run: |
+          set -euo pipefail
+          yarn -v
+          yarn config set registry "https://registry.npmjs.org"
+          yarn add lodash --dry-run --non-interactive
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/docs-style.npmrc
+
+      # Extra diagnostics if it fails in any OS/node combination
+      - name: Debug npmrc + env (on failure)
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "node=$(node -v)"
+          echo "npm=$(npm -v)"
+          echo "yarn=$(yarn -v)"
+          echo "OS=${{ runner.os }}"
+          echo "NODE_AUTH_TOKEN set? -> $([ -n "${NODE_AUTH_TOKEN:-}" ] && echo yes || echo no)"
+          echo "NPM_CONFIG_USERCONFIG=${NPM_CONFIG_USERCONFIG:-<not set>}"
+          echo "----- docs-style.npmrc -----"
+          cat "${GITHUB_WORKSPACE}/docs-style.npmrc" || true
+          echo "----- repo .npmrc -----"
+          cat .npmrc || true
+          echo "----- ~/.npmrc -----"
+          cat ~/.npmrc || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/docs-style.npmrc
