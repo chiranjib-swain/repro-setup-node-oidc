@@ -1,29 +1,33 @@
-name: Publish to npmjs with Yarn v1 (no env expansion in .npmrc)
+name: Publish Package to npmjs
 
 on:
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - uses: actions/checkout@v5
 
+      # ✅ Use your custom setup-node branch
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
+          scope: '@octocat'
+
+      # ✅ Enable latest Yarn (instead of default v1.22.22)
+      - name: Enable Corepack (Yarn latest)
+        run: |
+          corepack enable
+          corepack prepare yarn@stable --activate
+          yarn -v
 
       - run: yarn install
-        env:
-          # some projects still expect NODE_AUTH_TOKEN, but the auth is in ~/.npmrc now
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # For Yarn v1, use yarn publish (NOT yarn npm publish)
-      - run: yarn publish --access public --non-interactive
+      # ✅ Modern Yarn publish
+      - run: yarn npm publish --access public
         env:
-          # some projects still expect NODE_AUTH_TOKEN, but the auth is in ~/.npmrc now
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
