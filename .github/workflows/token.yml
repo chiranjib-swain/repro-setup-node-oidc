@@ -2,93 +2,103 @@ name: test-yarn-publish-npmjs-gpr
 
 on:
   workflow_dispatch:
-    inputs:
-      npm_scope:
-        description: "npmjs scope to publish under (without @). Example: chiranjib-swain"
-        required: true
-        default: "chiranjib-swain"
-      package_name:
-        description: "Package name without scope"
-        required: true
-        default: "repro-oidc-setup-node"
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v5
 
-      # Use Yarn v1 (matches docs behavior)
-      - run: npm install -g yarn@1.22.22
-
-      # ---------- npmjs ----------
+      # Setup Node (npmjs)
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          node-version: "24.x"
-          registry-url: "https://registry.npmjs.org"
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Set package scope for npmjs (dynamic)
-        shell: bash
+      # Install Yarn v1 + semver
+      - name: Install dependencies
         run: |
-          node - <<'NODE'
-          const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          npm install -g yarn@1.22.22
+          npm install semver
 
-          const scope = process.env.NPM_SCOPE;
-          const name = process.env.PACKAGE_NAME;
+      # -----------------------------
+      # STEP 1: Set npmjs package name
+      # -----------------------------
+      - name: Set package name (npmjs)
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            pkg.name='@chiranjib-infosys/repro-oidc-setup-node';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
 
-          pkg.name = `@${scope}/${name}`;
+      # -----------------------------
+      # STEP 2: Auto bump version
+      # -----------------------------
+      - name: Auto bump version
+        id: versioning
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
 
-          // Keep these for npmjs; harmless for dry-run
-          pkg.publishConfig = pkg.publishConfig || {};
-          pkg.publishConfig.access = "public";
+          echo "Checking latest version for $PACKAGE_NAME"
 
-          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + "\n");
-          console.log("npmjs package name set to:", pkg.name);
-          NODE
+          LATEST=$(npm view $PACKAGE_NAME version 2>/dev/null || echo "0.0.0")
+
+          echo "Latest version: $LATEST"
+
+          node -e "
+            const fs = require('fs');
+            const semver = require('semver');
+
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            const latest = process.env.LATEST || '0.0.0';
+
+            const next = latest === '0.0.0'
+              ? '0.0.1'
+              : semver.inc(latest, 'patch');
+
+            pkg.version = next;
+
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+
+            console.log('New version:', next);
+          "
         env:
-          NPM_SCOPE: ${{ inputs.npm_scope }}
-          PACKAGE_NAME: ${{ inputs.package_name }}
+          LATEST: ${{ env.LATEST }}
 
-      - name: yarn publish (npmjs - dry run)
-        run: yarn publish --non-interactive --dry-run --access public
+      # -----------------------------
+      # STEP 3: Publish to npmjs
+      # -----------------------------
+      - name: Yarn publish (npmjs)
+        run: yarn publish --non-interactive --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # ---------- GitHub Packages ----------
+      # -----------------------------
+      # STEP 4: Switch to GPR registry
+      # -----------------------------
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          registry-url: "https://npm.pkg.github.com"
+          registry-url: 'https://npm.pkg.github.com'
 
-      - name: Set package scope for GitHub Packages (dynamic)
-        shell: bash
+      # -----------------------------
+      # STEP 5: Change scope for GPR
+      # -----------------------------
+      - name: Set package name (GPR)
         run: |
-          node - <<'NODE'
-          const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            pkg.name='@chiranjib-swain/repro-oidc-setup-node';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
 
-          const scope = process.env.GITHUB_SCOPE;
-          const name = process.env.PACKAGE_NAME;
-
-          pkg.name = `@${scope}/${name}`;
-
-          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + "\n");
-          console.log("GPR package name set to:", pkg.name);
-          NODE
-        env:
-          GITHUB_SCOPE: ${{ github.repository_owner }}
-          PACKAGE_NAME: ${{ inputs.package_name }}
-
-      - name: Ensure scope routes to GitHub Packages
-        shell: bash
-        run: |
-          cat > .npmrc <<EOF
-          @${{ github.repository_owner }}:registry=https://npm.pkg.github.com
-          //npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}
-          EOF
-          cat .npmrc
-
-      - name: yarn publish (GPR - dry run)
-        run: yarn publish --non-interactive --dry-run --access public
+      # -----------------------------
+      # STEP 6: Publish to GPR
+      # -----------------------------
+      - name: Yarn publish (GPR)
+        run: yarn publish --non-interactive --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
