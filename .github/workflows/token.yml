@@ -2,31 +2,91 @@ name: test-yarn-publish-npmjs-gpr
 
 on:
   workflow_dispatch:
+    inputs:
+      npm_scope:
+        description: "npmjs scope to publish under (without @). Example: chiranjib-swain"
+        required: true
+        default: "chiranjib-swain"
+      package_name:
+        description: "Package name without scope"
+        required: true
+        default: "repro-oidc-setup-node"
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
 
-      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
-        with:
-          node-version: '24.x'
-          registry-url: 'https://registry.npmjs.org'
-
       # Use Yarn v1 (matches docs behavior)
       - run: npm install -g yarn@1.22.22
+
+      # ---------- npmjs ----------
+      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Set package scope for npmjs (dynamic)
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+          const scope = process.env.NPM_SCOPE;
+          const name = process.env.PACKAGE_NAME;
+
+          pkg.name = `@${scope}/${name}`;
+
+          // Keep these for npmjs; harmless for dry-run
+          pkg.publishConfig = pkg.publishConfig || {};
+          pkg.publishConfig.access = "public";
+
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + "\n");
+          console.log("npmjs package name set to:", pkg.name);
+          NODE
+        env:
+          NPM_SCOPE: ${{ inputs.npm_scope }}
+          PACKAGE_NAME: ${{ inputs.package_name }}
 
       - name: yarn publish (npmjs - dry run)
         run: yarn publish --non-interactive --dry-run --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Switch to GitHub Packages
+      # ---------- GitHub Packages ----------
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: "https://npm.pkg.github.com"
+
+      - name: Set package scope for GitHub Packages (dynamic)
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+          const scope = process.env.GITHUB_SCOPE;
+          const name = process.env.PACKAGE_NAME;
+
+          pkg.name = `@${scope}/${name}`;
+
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + "\n");
+          console.log("GPR package name set to:", pkg.name);
+          NODE
+        env:
+          GITHUB_SCOPE: ${{ github.repository_owner }}
+          PACKAGE_NAME: ${{ inputs.package_name }}
+
+      - name: Ensure scope routes to GitHub Packages
+        shell: bash
+        run: |
+          cat > .npmrc <<EOF
+          @${{ github.repository_owner }}:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}
+          EOF
+          cat .npmrc
 
       - name: yarn publish (GPR - dry run)
         run: yarn publish --non-interactive --dry-run --access public
