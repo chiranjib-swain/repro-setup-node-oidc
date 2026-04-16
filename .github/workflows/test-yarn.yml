@@ -1,27 +1,34 @@
-
-name: testing-yarn(1477)
+name: Publish to npmjs with Yarn v1 (no env expansion in .npmrc)
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os-version }}
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [20, 22, 24]
-        os-version: [ubuntu-latest, windows-latest, macos-latest]
-        
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup Node (${{ matrix.node-version }})
-        uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          node-version: ${{ matrix.node-version }}
-        #   registry-url: 'https://registry.npmjs.org'
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: yarn install 
-        run: yarn add lodash --dry-run
+      - name: Create docs-style npmrc (contains ${NODE_AUTH_TOKEN})
+        run: |
+          cat > /tmp/docs-style.npmrc <<'EOF'
+          registry=https://registry.npmjs.org/
+          always-auth=true
+          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+          EOF
+          echo "----- /tmp/docs-style.npmrc -----"
+          cat /tmp/docs-style.npmrc
+
+      - name: Yarn install using docs-style npmrc
+        run: yarn install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_USERCONFIG: /tmp/docs-style.npmrc
