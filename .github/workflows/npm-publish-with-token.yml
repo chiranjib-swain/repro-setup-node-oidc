@@ -1,42 +1,168 @@
-name: Debug Yarn env substitution
+name: Test setup-node PR branch (npmjs + GPR + npmrc + Yarn v1)
 
 on:
   workflow_dispatch:
+    inputs:
+      do_real_publish:
+        description: "Set to true to do REAL publishes (dangerous). Default runs dry-run only."
+        required: false
+        default: "false"
+      npmjs_access:
+        description: "npm publish --access value for npmjs real publish (public|restricted)"
+        required: false
+        default: "public"
 
 jobs:
-  debug:
+  test:
+    name: Test target=${{ matrix.target }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # npmjs.org test lane
+          - target: npmjs
+            registry_url: "https://registry.npmjs.org"
+            # optionally set scope if needed for your package name
+            scope: ""
+            needs_packages_permission: false
+
+          # GitHub Packages (npm.pkg.github.com) test lane
+          - target: gpr
+            registry_url: "https://npm.pkg.github.com"
+            scope: "@chiranjib-swain"
+            needs_packages_permission: true
+
     permissions:
       contents: read
       id-token: write
+      # packages permission is only needed for GitHub Packages publishing
+      packages: write
 
     steps:
       - uses: actions/checkout@v5
 
-      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+      - name: Setup Node (PR branch under test)
+        uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@chiranjib-infosys'
+          node-version: "20.x"
+          registry-url: ${{ matrix.registry_url }}
+          # Only provide scope for GitHub Packages lane (and only if you actually publish scoped)
+          scope: ${{ matrix.scope }}
 
-      - name: Show versions and npmrc
+      - name: Show versions and setup-node generated npm userconfig
+        shell: bash
         run: |
-          node -v
-          npm -v
-          yarn -v
-          echo "----- ~/.npmrc -----"
-          cat ~/.npmrc || true
-          echo "----- .npmrc (repo) -----"
+          set -euo pipefail
+          echo "target=${{ matrix.target }}"
+          echo "registry=${{ matrix.registry_url }}"
+          echo
+          echo "node: $(node -v)"
+          echo "npm:  $(npm -v)"
+          echo "yarn: $(yarn -v)"
+          echo
+          echo "NPM_CONFIG_USERCONFIG=${NPM_CONFIG_USERCONFIG:-<not set>}"
+          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "${NPM_CONFIG_USERCONFIG}" ]; then
+            echo "----- ${NPM_CONFIG_USERCONFIG} (redacted) -----"
+            sed -E 's/(_authToken=).*/\1***REDACTED***/' "${NPM_CONFIG_USERCONFIG}"
+          else
+            echo "No NPM_CONFIG_USERCONFIG file found."
+          fi
+          echo
+          echo "repo .npmrc:"
+          ls -la .npmrc || true
           cat .npmrc || true
+          echo
+          echo "~/.npmrc:"
+          ls -la ~/.npmrc || true
+          cat ~/.npmrc || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: NPM publish (dry-run)
-        run: npm publish --dry-run --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Install deps (npm)
+        run: npm ci
 
-      - name: Yarn install (expected to fail on v1 if npmrc contains ${NODE_AUTH_TOKEN})
+      - name: npm publish (dry-run)
+        run: |
+          if [ "${{ matrix.target }}" = "npmjs" ]; then
+            npm publish --dry-run --access "${{ inputs.npmjs_access }}"
+          else
+            npm publish --dry-run
+          fi
+        env:
+          # For dry-run, token usually not needed, but keep it consistent.
+          NODE_AUTH_TOKEN: ${{ matrix.target == 'npmjs' && secrets.NPM_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Yarn install using setup-node config (baseline)
         run: yarn install
         env:
+          NODE_AUTH_TOKEN: ${{ matrix.target == 'npmjs' && secrets.NPM_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # --- Force the “docs .npmrc contains ${NODE_AUTH_TOKEN}” scenario ---
+      - name: Create docs-style npmrc (with ${NODE_AUTH_TOKEN})
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.target }}" = "npmjs" ]; then
+            cat > /tmp/docs-style.npmrc <<'EOF'
+            registry=https://registry.npmjs.org/
+            always-auth=true
+            //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+            EOF
+          else
+            cat > /tmp/docs-style.npmrc <<'EOF'
+            @chiranjib-swain:registry=https://npm.pkg.github.com
+            always-auth=true
+            //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+            EOF
+          fi
+          echo "----- /tmp/docs-style.npmrc -----"
+          cat /tmp/docs-style.npmrc
+
+      - name: Yarn install using docs-style npmrc (forces env replacement behavior)
+        run: yarn install
+        env:
+          NODE_AUTH_TOKEN: ${{ matrix.target == 'npmjs' && secrets.NPM_TOKEN || secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_USERCONFIG: /tmp/docs-style.npmrc
+
+      # --- Workaround test: inline token (no ${...} expansion) ---
+      - name: Create inlined-token npmrc (no ${...})
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.target }}" = "npmjs" ]; then
+            cat > /tmp/inlined-token.npmrc <<EOF
+            registry=https://registry.npmjs.org/
+            always-auth=true
+            //registry.npmjs.org/:_authToken=${TOKEN}
+            EOF
+          else
+            cat > /tmp/inlined-token.npmrc <<EOF
+            @chiranjib-swain:registry=https://npm.pkg.github.com
+            always-auth=true
+            //npm.pkg.github.com/:_authToken=${TOKEN}
+            EOF
+          fi
+          echo "----- /tmp/inlined-token.npmrc (redacted) -----"
+          sed -E 's/(_authToken=).*/\1***REDACTED***/' /tmp/inlined-token.npmrc
+        env:
+          TOKEN: ${{ matrix.target == 'npmjs' && secrets.NPM_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Yarn install using inlined-token npmrc (workaround)
+        run: yarn install
+        env:
+          NPM_CONFIG_USERCONFIG: /tmp/inlined-token.npmrc
+
+      # --- Optional real publishes (guarded) ---
+      - name: REAL publish to npmjs (only if do_real_publish=true)
+        if: ${{ inputs.do_real_publish == 'true' && matrix.target == 'npmjs' }}
+        run: npm publish --provenance --access "${{ inputs.npmjs_access }}"
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: REAL publish to GitHub Packages (only if do_real_publish=true)
+        if: ${{ inputs.do_real_publish == 'true' && matrix.target == 'gpr' }}
+        run: npm publish --provenance=false
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
