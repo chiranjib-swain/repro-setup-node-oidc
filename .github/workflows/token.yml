@@ -1,104 +1,26 @@
-name: test-yarn-publish-npmjs-gpr
+name: test-private-packages
 
 on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  install:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v5
 
-      # Setup Node (npmjs)
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
-      # Install Yarn v1 + semver
-      - name: Install dependencies
-        run: |
-          npm install -g yarn@1.22.22
-          npm install semver
-
-      # -----------------------------
-      # STEP 1: Set npmjs package name
-      # -----------------------------
-      - name: Set package name (npmjs)
-        run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json'));
-            pkg.name='@chiranjib-infosys/repro-oidc-setup-node';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-          "
-
-      # -----------------------------
-      # STEP 2: Auto bump version
-      # -----------------------------
-      - name: Auto bump version
-        id: versioning
-        run: |
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-
-          echo "Checking latest version for $PACKAGE_NAME"
-
-          LATEST=$(npm view $PACKAGE_NAME version 2>/dev/null || echo "0.0.0")
-
-          echo "Latest version: $LATEST"
-
-          node -e "
-            const fs = require('fs');
-            const semver = require('semver');
-
-            const pkg = JSON.parse(fs.readFileSync('package.json'));
-            const latest = process.env.LATEST || '0.0.0';
-
-            const next = latest === '0.0.0'
-              ? '0.0.1'
-              : semver.inc(latest, 'patch');
-
-            pkg.version = next;
-
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-
-            console.log('New version:', next);
-          "
-        env:
-          LATEST: ${{ env.LATEST }}
-
-      # -----------------------------
-      # STEP 3: Publish to npmjs
-      # -----------------------------
-      - name: Yarn publish (npmjs)
-        run: yarn publish --non-interactive --access public
+      # Secure install (no scripts)
+      - name: npm ci (ignore scripts)
+        run: npm ci --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # -----------------------------
-      # STEP 4: Switch to GPR registry
-      # -----------------------------
-      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
-        with:
-          registry-url: 'https://npm.pkg.github.com'
-
-      # -----------------------------
-      # STEP 5: Change scope for GPR
-      # -----------------------------
-      - name: Set package name (GPR)
-        run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json'));
-            pkg.name='@chiranjib-swain/repro-oidc-setup-node';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-          "
-
-      # -----------------------------
-      # STEP 6: Publish to GPR
-      # -----------------------------
-      - name: Yarn publish (GPR)
-        run: yarn publish --non-interactive --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Run scripts after install
+      - name: rebuild + prepare
+        run: npm rebuild && npm run prepare --if-present
