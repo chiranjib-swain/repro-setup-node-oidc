@@ -17,13 +17,10 @@ jobs:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Write npm auth config explicitly for Yarn v1
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - run: yarn install
+        env:
+          # some projects still expect NODE_AUTH_TOKEN, but the auth is in ~/.npmrc now
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # For Yarn v1, use yarn publish (NOT yarn npm publish)
       - run: yarn publish --access public --non-interactive
