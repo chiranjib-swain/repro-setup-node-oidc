@@ -1,4 +1,4 @@
-name: test-1-npm-baseline
+name: test-2-yarn-v1
 
 on:
   workflow_dispatch:
@@ -15,8 +15,10 @@ jobs:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
 
-      - run: npm ci
+      - run: npm install -g yarn@1.22.22
 
-      - run: npm publish --dry-run
+      - run: yarn -v
+
+      - run: yarn install
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
