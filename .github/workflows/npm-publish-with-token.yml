@@ -1,4 +1,4 @@
-name: Publish to npmjs with Yarn Berry
+name: Publish to npmjs with Yarn v1 (no env expansion in .npmrc)
 
 on:
   workflow_dispatch:
@@ -8,7 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
 
     steps:
       - uses: actions/checkout@v5
@@ -17,16 +16,17 @@ jobs:
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
-          scope: '@chiranjib-infosys'
 
-      - name: Enable Corepack + Yarn Berry
+      - name: Write npm auth config explicitly for Yarn v1
         run: |
-          corepack enable
-          corepack prepare yarn@4.5.0 --activate
-          yarn -v
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - run: yarn install
 
-      - run: yarn npm publish --access public
+      # For Yarn v1, use yarn publish (NOT yarn npm publish)
+      - run: yarn publish --access public --non-interactive
         env:
+          # some projects still expect NODE_AUTH_TOKEN, but the auth is in ~/.npmrc now
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
