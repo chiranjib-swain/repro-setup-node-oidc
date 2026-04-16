@@ -7,10 +7,11 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write # required if npm generates provenance/attestations in GitHub Actions
     steps:
       - uses: actions/checkout@v5
       # Setup .npmrc file to publish to GitHub Packages
-      - uses: actions/setup-node@v4
+      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '20.x'
           registry-url: 'https://npm.pkg.github.com'
