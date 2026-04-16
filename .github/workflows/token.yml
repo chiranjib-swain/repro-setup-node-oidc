@@ -18,7 +18,6 @@ jobs:
       # Use Yarn v1 (matches docs behavior)
       - run: npm install -g yarn@1.22.22
 
-      - run: yarn install
 
       - name: yarn publish (npmjs - dry run)
         run: yarn publish --non-interactive --dry-run
