@@ -1,4 +1,4 @@
-name: test-7-docs-npmrc-fixed
+name: test-yarn2-private-registry
 
 on:
   workflow_dispatch:
@@ -10,21 +10,27 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # ✅ Use your PR branch
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
-      - name: Create npmrc
+      # ✅ Enable Yarn modern (required!)
+      - name: Enable Corepack
         run: |
-          cat > /tmp/test.npmrc <<'EOF'
-          registry=https://registry.npmjs.org/
-          always-auth=true
-          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
-          EOF
+          corepack enable
+          corepack prepare yarn@stable --activate
+          yarn -v
 
-      - run: npm install -g yarn@1.22.22
-
-      - run: yarn install
+      # ✅ Setup Yarn v2+ auth config
+      - name: Setup .yarnrc.yml
+        run: |
+          yarn config set npmScopes.my-org.npmRegistryServer "https://npm.pkg.github.com"
+          yarn config set npmScopes.my-org.npmAlwaysAuth true
+          yarn config set npmScopes.my-org.npmAuthToken $NPM_AUTH_TOKEN
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_USERCONFIG: /tmp/test.npmrc
+          NPM_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ✅ Install
+      - name: Install dependencies
+        run: yarn install --no-immutable
