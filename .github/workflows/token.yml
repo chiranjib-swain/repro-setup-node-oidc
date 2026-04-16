@@ -18,9 +18,8 @@ jobs:
       # Use Yarn v1 (matches docs behavior)
       - run: npm install -g yarn@1.22.22
 
-
       - name: yarn publish (npmjs - dry run)
-        run: yarn publish --non-interactive --dry-run
+        run: yarn publish --non-interactive --dry-run --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -30,6 +29,6 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
 
       - name: yarn publish (GPR - dry run)
-        run: yarn publish --non-interactive --dry-run
+        run: yarn publish --non-interactive --dry-run --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
