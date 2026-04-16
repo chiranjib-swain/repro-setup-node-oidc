@@ -1,4 +1,4 @@
-name: test-npm-publish-npmjs-gpr
+name: test-yarn-publish-npmjs-gpr
 
 on:
   workflow_dispatch:
@@ -10,25 +10,27 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # npmjs publish
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
 
-      - run: npm ci
+      # Use Yarn v1 (matches docs behavior)
+      - run: npm install -g yarn@1.22.22
 
-      - name: npm publish (npmjs - dry run)
-        run: npm publish --dry-run
+      - run: yarn install
+
+      - name: yarn publish (npmjs - dry run)
+        run: yarn publish --non-interactive --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # GPR publish
+      # Switch to GitHub Packages
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           registry-url: 'https://npm.pkg.github.com'
 
-      - name: npm publish (GPR - dry run)
-        run: npm publish --dry-run
+      - name: yarn publish (GPR - dry run)
+        run: yarn publish --non-interactive --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
