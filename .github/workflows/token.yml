@@ -1,4 +1,4 @@
-name: test-2-yarn-v1
+name: test-3-yarn-v1-no-token
 
 on:
   workflow_dispatch:
@@ -17,8 +17,4 @@ jobs:
 
       - run: npm install -g yarn@1.22.22
 
-      - run: yarn -v
-
       - run: yarn install
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
