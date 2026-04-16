@@ -1,37 +1,22 @@
-name: test-token-override
+name: test-1-npm-baseline
 
 on:
   workflow_dispatch:
 
 jobs:
-  with-dummy:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Create .npmrc with env reference
-        run: |
-          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
-          echo "always-auth=true" >> ~/.npmrc
+      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Inject dummy NODE_AUTH_TOKEN
-        run: |
-          echo "NODE_AUTH_TOKEN=XXXXX-XXXXX-XXXXX-XXXXX" >> $GITHUB_ENV
+      - run: npm ci
 
-      - name: Debug token
-        run: echo "Token-> $NODE_AUTH_TOKEN"
-
-      - name: Debug .npmrc
-        run: |
-          echo "----- .npmrc -----"
-          cat ~/.npmrc
-
-      - name: npm config list
-        run: npm config list
-
-      - name: Try npm install (WITH dummy token)
-        run: |
-          npm init -y
-          npm install lodash
+      - run: npm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
