@@ -1,4 +1,4 @@
-name: test-5-yarn-modern-no-token
+name: test-6-docs-npmrc-repro
 
 on:
   workflow_dispatch:
@@ -14,8 +14,17 @@ jobs:
         with:
           node-version: '20.x'
 
-      - run: |
-          corepack enable
-          corepack prepare yarn@stable --activate
+      - name: Create docs-style npmrc
+        run: |
+          cat > /tmp/test.npmrc <<'EOF'
+          registry=https://registry.npmjs.org/
+          always-auth=true
+          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+          EOF
 
-      - run: yarn install --no-immutable
+      - run: npm install -g yarn@1.22.22
+
+      - name: Yarn install (expected failure)
+        run: yarn install
+        env:
+          NPM_CONFIG_USERCONFIG: /tmp/test.npmrc
