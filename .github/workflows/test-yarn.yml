@@ -1,0 +1,27 @@
+
+name: testing-yarn(1477)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os-version }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
+        os-version: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node (${{ matrix.node-version }})
+        uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+        with:
+          node-version: ${{ matrix.node-version }}
+        #   registry-url: 'https://registry.npmjs.org'
+
+      - name: yarn install 
+        run: yarn add lodash --dry-run
