@@ -1,4 +1,4 @@
-name: test-4-yarn-modern
+name: test-5-yarn-modern-no-token
 
 on:
   workflow_dispatch:
@@ -13,13 +13,9 @@ jobs:
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
 
       - run: |
           corepack enable
           corepack prepare yarn@stable --activate
-          yarn -v
 
       - run: yarn install --no-immutable
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
