@@ -1,22 +1,42 @@
-name: Publish Package to npmjs with yarn
+name: Debug Yarn env substitution
+
 on:
   workflow_dispatch:
+
 jobs:
-  build:
+  debug:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+
     steps:
       - uses: actions/checkout@v5
-      # Setup .npmrc file to publish to npm
+
       - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
-          # Defaults to the user or organization that owns the workflow file
           scope: '@chiranjib-infosys'
-      - run: yarn
-      - run: yarn npm publish // for Yarn version 1, use `yarn publish` instead
+
+      - name: Show versions and npmrc
+        run: |
+          node -v
+          npm -v
+          yarn -v
+          echo "----- ~/.npmrc -----"
+          cat ~/.npmrc || true
+          echo "----- .npmrc (repo) -----"
+          cat .npmrc || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: NPM publish (dry-run)
+        run: npm publish --dry-run --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Yarn install (expected to fail on v1 if npmrc contains ${NODE_AUTH_TOKEN})
+        run: yarn install
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
