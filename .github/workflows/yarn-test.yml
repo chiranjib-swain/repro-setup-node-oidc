@@ -23,13 +23,6 @@ jobs:
       # ✅ Checkout
       - uses: actions/checkout@v4
 
-       # ✅ Setup Node (OIDC + registry)
-      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
-        with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: "https://registry.npmjs.org"
-          cache: yarn
-
 
       # ✅ Enable Corepack + set Yarn version
       - name: Setup Yarn
@@ -46,6 +39,13 @@ jobs:
 
       # ✅ Install dependencies
       - run: corepack yarn install
+
+      # ✅ Setup Node (OIDC + registry)
+      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: "https://registry.npmjs.org"
+          cache: ''
 
 
       - name: Get current npm version
