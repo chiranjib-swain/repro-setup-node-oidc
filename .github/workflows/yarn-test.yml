@@ -23,12 +23,6 @@ jobs:
       # ✅ Checkout
       - uses: actions/checkout@v4
 
-      # ✅ Setup Node (OIDC + registry)
-      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
-        with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: "https://registry.npmjs.org"
-          cache: yarn
 
       # ✅ Enable Corepack + set Yarn version
       - name: Setup Yarn
@@ -44,7 +38,14 @@ jobs:
           echo 'nodeLinker: node-modules' >> .yarnrc.yml
 
       # ✅ Install dependencies
-      - run: yarn install
+      - run: corepack yarn install
+
+      # ✅ Setup Node (OIDC + registry)
+      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: "https://registry.npmjs.org"
+          cache: yarn
 
       # ✅ Get current version from npm
       - name: Get current npm version
@@ -62,9 +63,9 @@ jobs:
             console.log(v.join('.'));
           ")
           echo "Publishing version: $NEW_VERSION"
-          yarn version $NEW_VERSION
+          corepack yarn version $NEW_VERSION
 
       # ✅ Publish (only once to avoid conflicts)
       - name: Yarn Publish (OIDC)
         # if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24 && matrix.yarn-version == '4.1.1'
-        run: yarn npm publish --access public
+        run: corepack yarn npm publish --access public
