@@ -48,8 +48,13 @@ jobs:
           cache: yarn
 
 
-      # ✅ Bump version through npm because Yarn 2.4.3 is too old 
-      - name: Bump version
+      - name: Get current npm version
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          CURRENT_VERSION=$(npm view $PKG_NAME version || echo "0.0.0")
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+      - name: Bump version from registry
         run: |
           NEW_VERSION=$(node -e "
             const v = process.env.CURRENT_VERSION.split('.');
@@ -57,7 +62,7 @@ jobs:
             console.log(v.join('.'));
           ")
           echo "Publishing version: $NEW_VERSION"
-          npm version "$NEW_VERSION" --no-git-tag-version
+          npm pkg set version=$NEW_VERSION
 
       # ✅ Publish (only once to avoid conflicts)
       - name: Yarn Publish (OIDC)
