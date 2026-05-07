@@ -1,0 +1,62 @@
+name: test-pnpm-runtime-behavior
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        pnpm: [10, 11]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 23
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare pnpm
+        run: corepack prepare pnpm@${{ matrix.pnpm }} --activate
+
+      - name: Create package.json
+        run: |
+          cat <<'EOF' > package.json
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "packageManager": "pnpm@${{ matrix.pnpm }}",
+            "devEngines": {
+              "runtime": {
+                "name": "node",
+                "version": "^18.20.0 || ^20.0.0 || >=22"
+              }
+            }
+          }
+          EOF
+
+      - name: Create .npmrc
+        run: |
+          cat <<'EOF' > .npmrc
+          use-node-version=18.20.0
+          EOF
+
+      - name: Print versions
+        run: |
+          echo "System node:"
+          node -v
+
+          echo "pnpm version:"
+          pnpm -v
+
+          echo "pnpm node:"
+          pnpm node -v
+
+      - name: Run install
+        run: pnpm install
