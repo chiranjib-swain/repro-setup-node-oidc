@@ -9,7 +9,9 @@ jobs:
 
     strategy:
       matrix:
-        pnpm: [10, 11]
+        include:
+          - pnpm: 10.33.4
+          - pnpm: 11.0.0
 
     steps:
       - uses: actions/checkout@v5
@@ -27,7 +29,7 @@ jobs:
 
       - name: Create package.json
         run: |
-          cat <<'EOF' > package.json
+          cat <<EOF > package.json
           {
             "name": "test-project",
             "version": "1.0.0",
@@ -43,11 +45,11 @@ jobs:
 
       - name: Create .npmrc
         run: |
-          cat <<'EOF' > .npmrc
+          cat <<EOF > .npmrc
           use-node-version=18.20.0
           EOF
 
-      - name: Print versions
+      - name: Print versions before install
         run: |
           echo "System node:"
           node -v
@@ -58,5 +60,16 @@ jobs:
           echo "pnpm node:"
           pnpm node -v
 
-      - name: Run install
+      - name: Run pnpm install
         run: pnpm install
+
+      - name: Print versions after install
+        run: |
+          echo "System node after install:"
+          node -v
+
+          echo "pnpm version after install:"
+          pnpm -v
+
+          echo "pnpm node after install:"
+          pnpm node -v
