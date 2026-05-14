@@ -1,31 +1,33 @@
-name: Publish Package to npmjs
+
+name: Test Publish (NODE_AUTH_TOKEN NOT cleared)
 
 on:
   workflow_dispatch:
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
-
+    environment: release
     steps:
-      - uses: actions/checkout@v5
-
-      # ✅ Use your custom setup-node branch
-      - uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@octocat'
-
-      # ✅ Enable latest Yarn (instead of default v1.22.22)
-      - name: Enable Corepack (Yarn latest)
-        run: |
-          corepack enable
-          corepack prepare yarn@stable --activate
-          yarn -v
-
-      - run: yarn install
-
-      # ✅ Modern Yarn publish
-      - run: yarn npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    
+    - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+    
+    - name: Use Node.js 24
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version: "24"
+        registry-url: "https://registry.npmjs.org"
+        package-manager-cache: false
+    
+    - run: pnpm install
+    - run: pnpm build
+    
+    - name: Publish
+      # env:
+        # NODE_AUTH_TOKEN: ""
+      run: pnpm publish --recursive --no-git-checks --verbose
