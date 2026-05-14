@@ -4,7 +4,8 @@
   "private": false,
   "main": "index.js",
   "scripts": {
-    "test": "node -e \"console.log('ok')\""
+    "test": "node -e \"console.log('ok')\"",
+    "build": "node -e \"console.log('build ok')\""
   },
   "keywords": [],
   "author": "",
