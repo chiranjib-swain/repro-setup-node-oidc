@@ -2,9 +2,7 @@
 name: Test Publish (NODE_AUTH_TOKEN NOT cleared)
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 # permissions:
 #   id-token: write # Required for OIDC
