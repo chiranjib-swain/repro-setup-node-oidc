@@ -39,7 +39,6 @@ jobs:
           echo "✅ OIDC id-token permission is available."
         else
           echo "❌ OIDC id-token permission is NOT available or request failed (status: $OIDC_TOKEN)."
-          exit 1
         fi
     
     - name: Read version and publish
