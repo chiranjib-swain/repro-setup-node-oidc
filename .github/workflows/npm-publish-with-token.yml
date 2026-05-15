@@ -6,9 +6,9 @@ on:
     tags:
       - "v*"
 
-permissions:
-  id-token: write # Required for OIDC
-  contents: read
+# permissions:
+#   id-token: write # Required for OIDC
+#   contents: read
 
 jobs:
   publish:
@@ -53,3 +53,5 @@ jobs:
           else
             pnpm publish --recursive --no-git-checks
           fi
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
