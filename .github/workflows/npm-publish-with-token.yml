@@ -28,8 +28,19 @@ jobs:
     - run: pnpm install
     - run: pnpm build
 
-    - name: To check npm whoami
-      run: npm whoami
+    - name: Check OIDC token availability
+      run: |
+        echo "Checking if OIDC id-token permission is granted..."
+        OIDC_TOKEN=$(curl -s -o /dev/null -w "%{http_code}" \
+          -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sigstore")
+        echo "OIDC token request HTTP status: $OIDC_TOKEN"
+        if [ "$OIDC_TOKEN" = "200" ]; then
+          echo "✅ OIDC id-token permission is available."
+        else
+          echo "❌ OIDC id-token permission is NOT available or request failed (status: $OIDC_TOKEN)."
+          exit 1
+        fi
     
     - name: Publish
       # env:
