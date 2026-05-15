@@ -2,7 +2,9 @@
 name: Test Publish (NODE_AUTH_TOKEN NOT cleared)
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 permissions:
   id-token: write # Required for OIDC
@@ -23,7 +25,7 @@ jobs:
         node-version: "24.14.1"
         registry-url: "https://registry.npmjs.org"
         # cache: pnpm
-        package-manager-cache: false
+        # package-manager-cache: false
     
     - run: pnpm install
     - run: pnpm build
@@ -42,7 +44,12 @@ jobs:
           exit 1
         fi
     
-    - name: Publish
-      # env:
-        # NODE_AUTH_TOKEN: ""
-      run: pnpm publish --recursive --no-git-checks --verbose
+    - name: Read version and publish
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "Publishing version $VERSION to npm..."
+        if [[ "$VERSION" == *alpha* || "$VERSION" == *beta* ]]; then
+            pnpm publish --recursive --no-git-checks --tag beta
+          else
+            pnpm publish --recursive --no-git-checks
+          fi

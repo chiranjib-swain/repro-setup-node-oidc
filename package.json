@@ -1,6 +1,6 @@
 {
   "name": "@chiranjib-infosys/repro-oidc-setup-node",
-  "version": "0.0.37",
+   "version": "0.0.1-beta.1",
   "private": false,
   "main": "index.js",
   "scripts": {
@@ -12,8 +12,7 @@
   "license": "ISC",
   "description": "Repro package for testing npm OIDC + actions/setup-node behavior",
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "repository": {
     "type": "git",
