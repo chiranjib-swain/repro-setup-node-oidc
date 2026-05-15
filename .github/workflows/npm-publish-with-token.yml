@@ -27,6 +27,9 @@ jobs:
     
     - run: pnpm install
     - run: pnpm build
+
+    - name: To check npm whoami
+      run: npm whoami
     
     - name: Publish
       # env:
