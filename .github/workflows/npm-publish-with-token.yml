@@ -24,6 +24,9 @@ jobs:
         registry-url: "https://registry.npmjs.org"
         # cache: pnpm
         package-manager-cache: false # Disable caching to isolate publish behavior
+
+    - name: Print .npmrc for debugging
+      run: cat ~/.npmrc
     
     - run: pnpm install
     - run: pnpm build
