@@ -11,28 +11,29 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: chiranjib-swain/npm-cli
-          ref: envReplace
+          ref: envReplace  # Change to your branch name
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install dependencies
         run: npm install
 
-      # If your CLI needs to be built, add a build step here
-      # - name: Build CLI
-      #   run: npm run build
-
-      - name: Set test env variable
-        run: echo "NODE_AUTH_TOKEN=TEST-TOKEN-123" >> $GITHUB_ENV
+      # Do NOT set NODE_AUTH_TOKEN here to test the dummy token fallback
 
       - name: Create .npmrc with env var
         run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
 
+      - name: Show .npmrc and NODE_AUTH_TOKEN before npm run
+        run: |
+          echo ".npmrc contents:"
+          cat .npmrc
+          echo "NODE_AUTH_TOKEN: $NODE_AUTH_TOKEN"
+
       - name: Run npm command to trigger debug log
         run: node ./bin/npm-cli.js whoami || true
 
-      - name: Show debug output
-        run: cat /tmp/npm-debug.log || true
+      - name: Show npm debug log (if exists)
+        run: cat /home/runner/.npm/_logs/*-debug-*.log || true
