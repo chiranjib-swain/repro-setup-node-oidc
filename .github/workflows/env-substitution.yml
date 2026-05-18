@@ -14,7 +14,7 @@ jobs:
           ref: envReplace
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
 
@@ -25,8 +25,8 @@ jobs:
       # - name: Build CLI
       #   run: npm run build
 
-      # - name: Set test env variable
-      #   run: echo "NODE_AUTH_TOKEN=TEST-TOKEN-123" >> $GITHUB_ENV
+      - name: Set test env variable
+        run: echo "NODE_AUTH_TOKEN=TEST-TOKEN-123" >> $GITHUB_ENV
 
       - name: Create .npmrc with env var
         run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
