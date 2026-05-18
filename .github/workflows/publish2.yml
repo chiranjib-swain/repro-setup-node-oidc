@@ -1,27 +1,28 @@
-name: Detect OIDC token precedence vs dummy token
+name: Repro dummy token override (buggy npm simulation)
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write  # Required to trigger OIDC token exchange
+  id-token: write
 
 jobs:
-  detect-oidc-precedence:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout package to publish
         uses: actions/checkout@v4
         with:
-          path: package   # ← your repro-setup-node-oidc package lives here
+          repository: chiranjib-swain/repro-setup-node-oidc
+          path: package
 
       - name: Checkout custom npm-cli fork (for logging)
         uses: actions/checkout@v4
         with:
           repository: chiranjib-swain/npm-cli
           ref: envReplace
-          path: npm-cli   # ← forked npm CLI lives here
+          path: npm-cli
 
       - name: Set up Node.js 24 with registry-url
         uses: actions/setup-node@v4
@@ -33,33 +34,33 @@ jobs:
         run: |
           cd npm-cli
           npm install
-          npm install -g .  # Link the custom npm CLI globally
+          npm install -g .
+          npm --version
 
-      - name: Show environment state before publish
+      - name: Add project-level .npmrc to trigger the bug
         run: |
-          echo "=== Token State ==="
-          echo "NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}"
-          echo "NPM_CONFIG_USERCONFIG=${NPM_CONFIG_USERCONFIG}"
-          echo ""
-          echo "=== .npmrc Contents ==="
-          cat "${NPM_CONFIG_USERCONFIG}"
-          echo ""
-          echo "=== OIDC Env Vars ==="
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL:-(not set)}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-(not set)}"
+          echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' >> package/.npmrc
+          echo "--- package/.npmrc contents ---"
+          cat package/.npmrc
 
-      - name: Run npm publish with verbose logging        # ← key fix here
+      - name: Show setup-node userconfig (dummy token source)
+        run: |
+          echo "--- NPM_CONFIG_USERCONFIG=$NPM_CONFIG_USERCONFIG ---"
+          cat "$NPM_CONFIG_USERCONFIG"
+          echo ""
+          echo "--- NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN ---"
+
+      - name: Publish (expect 400 OIDC publish authorize Invalid token)
         working-directory: package
-        run: |
-          npm publish --access public --provenance --loglevel verbose 2>&1 | tee /tmp/publish.log || true
+        run: npm publish --access public --loglevel verbose 2>&1 | tee /tmp/publish.log
+        continue-on-error: true
 
-      - name: Extract DETECT log lines only
+      - name: Show DETECT lines
         run: |
-          echo "=== DETECTION LOG LINES ==="
-          grep "\[DETECT\]" /tmp/publish.log || echo "No [DETECT] lines found"
-          echo ""
-          echo "=== OIDC-related lines ==="
-          grep -i "oidc" /tmp/publish.log || echo "No OIDC lines found"
-          echo ""
-          echo "=== Auth error lines ==="
-          grep -E "E401|ENEEDAUTH|401 Unauthorized" /tmp/publish.log || echo "No auth errors found"
+          echo "=== [DETECT] lines ==="
+          grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines found"
+
+      - name: Show error lines
+        run: |
+          echo "=== Error lines ==="
+          grep -E 'E400|Invalid token|OIDC publish|tokenChanged' /tmp/publish.log || echo "No matching error lines"
