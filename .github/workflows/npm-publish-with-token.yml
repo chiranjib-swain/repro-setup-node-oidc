@@ -40,9 +40,9 @@ jobs:
           echo "ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL:-(not set)}"
           echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-(not set)}"
 
-      - name: Run npm publish --dry-run with verbose logging
+      - name: Run npm publish
         run: |
-          node ./bin/npm-cli.js publish --dry-run --loglevel verbose 2>&1 | tee /tmp/publish.log || true
+          npm publish --access public --provenance
 
       - name: Extract DETECT log lines only
         run: |
