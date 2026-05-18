@@ -11,21 +11,29 @@ jobs:
   detect-oidc-precedence:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout fork/branch
+      - name: Checkout package to publish
+        uses: actions/checkout@v4
+        with:
+          path: package   # ← your repro-setup-node-oidc package lives here
+
+      - name: Checkout custom npm-cli fork (for logging)
         uses: actions/checkout@v4
         with:
           repository: chiranjib-swain/npm-cli
           ref: envReplace
+          path: npm-cli   # ← forked npm CLI lives here
 
       - name: Set up Node.js 24 with registry-url
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          # No NODE_AUTH_TOKEN provided — setup-node exports fallback XXXXX-XXXXX-XXXXX-XXXXX
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install & link custom npm CLI
+        run: |
+          cd npm-cli
+          npm install
+          npm link --global
 
       - name: Show environment state before publish
         run: |
@@ -41,6 +49,7 @@ jobs:
           echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-(not set)}"
 
       - name: Run npm publish
+        working-directory: package   # ← publish YOUR package
         run: |
           npm publish --access public --provenance
 
