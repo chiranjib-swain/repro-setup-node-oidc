@@ -48,10 +48,10 @@ jobs:
           echo "ACTIONS_ID_TOKEN_REQUEST_URL=${ACTIONS_ID_TOKEN_REQUEST_URL:-(not set)}"
           echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-(not set)}"
 
-      - name: Run npm publish
-        working-directory: package   # ← publish YOUR package
+      - name: Run npm publish with verbose logging        # ← key fix here
+        working-directory: package
         run: |
-          npm publish --access public --provenance
+          npm publish --access public --provenance --loglevel verbose 2>&1 | tee /tmp/publish.log || true
 
       - name: Extract DETECT log lines only
         run: |
