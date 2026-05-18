@@ -25,7 +25,7 @@ jobs:
           path: npm-cli
 
       - name: Set up Node.js 24 with registry-url
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
@@ -49,6 +49,12 @@ jobs:
           cat "$NPM_CONFIG_USERCONFIG"
           echo ""
           echo "--- NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN ---"
+
+      - name: Want to unset NODE_AUTH_TOKEN
+        run: |
+          echo "Unsetting NODE_AUTH_TOKEN to simulate OIDC token precedence bug"
+          unset NODE_AUTH_TOKEN
+          echo "NODE_AUTH_TOKEN after unset: ${NODE_AUTH_TOKEN:-(not set)}"
 
       - name: Publish (expect 400 OIDC publish authorize Invalid token)
         working-directory: package
