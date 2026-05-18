@@ -1,37 +1,66 @@
-name: Repro dummy token override
+name: Repro dummy token override (buggy npm simulation)
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write   # required for OIDC token exchange
+  id-token: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout package to publish
+        uses: actions/checkout@v4
+        with:
+          repository: chiranjib-swain/repro-setup-node-oidc
+          path: package
 
-      - name: Show project .npmrc (confirm dummy token is here)
-        run: cat .npmrc
+      - name: Checkout custom npm-cli fork (for logging)
+        uses: actions/checkout@v4
+        with:
+          repository: chiranjib-swain/npm-cli
+          ref: envReplace
+          path: npm-cli
 
-      - uses: actions/setup-node@v6
+      - name: Set up Node.js 24 with registry-url
+        uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          # intentionally NOT setting node-auth-token so setup-node injects XXXXX-XXXXX-XXXXX-XXXXX
 
-      - name: Show setup-node's userconfig (confirm dummy token is also here)
-        run: cat "$NPM_CONFIG_USERCONFIG"
-
-      - name: Show which layer wins before publish
+      - name: Install & link custom npm CLI
         run: |
-          echo "NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN"
-          echo "--- userconfig contents ---"
+          cd npm-cli
+          npm install
+          npm install -g .
+          npm --version
+
+      - name: Add project-level .npmrc to trigger the bug
+        run: |
+          echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' >> package/.npmrc
+          echo "--- package/.npmrc contents ---"
+          cat package/.npmrc
+
+      - name: Show setup-node userconfig (dummy token source)
+        run: |
+          echo "--- NPM_CONFIG_USERCONFIG=$NPM_CONFIG_USERCONFIG ---"
           cat "$NPM_CONFIG_USERCONFIG"
-          echo "--- project .npmrc contents ---"
-          cat .npmrc
+          echo ""
+          echo "--- NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN ---"
 
       - name: Publish (expect 400 OIDC publish authorize Invalid token)
-        run: npm publish --access public
+        working-directory: package
+        run: npm publish --access public --loglevel verbose 2>&1 | tee /tmp/publish.log
+        continue-on-error: true
+
+      - name: Show DETECT lines
+        run: |
+          echo "=== [DETECT] lines ==="
+          grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines found"
+
+      - name: Show error lines
+        run: |
+          echo "=== Error lines ==="
+          grep -E 'E400|Invalid token|OIDC publish|tokenChanged' /tmp/publish.log || echo "No matching error lines"
