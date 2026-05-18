@@ -28,11 +28,10 @@ jobs:
       - name: Show which layer wins before publish
         run: |
           echo "NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN"
-          node -e "
-          const { execSync } = require('child_process');
-          const out = execSync('npm config get //registry.npmjs.org/:_authToken').toString().trim();
-          console.log('npm config get authToken:', out);
-          "
+          echo "--- userconfig contents ---"
+          cat "$NPM_CONFIG_USERCONFIG"
+          echo "--- project .npmrc contents ---"
+          cat .npmrc
 
       - name: Publish (expect 400 OIDC publish authorize Invalid token)
         run: npm publish --access public
