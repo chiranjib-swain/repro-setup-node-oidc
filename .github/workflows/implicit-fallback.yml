@@ -1,0 +1,29 @@
+name: Confirm setup-node implicit NODE_AUTH_TOKEN fallback
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: chiranjib-swain/npm-cli
+          ref: envReplace
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - run: npm install
+
+      - name: Verify setup-node outputs
+        run: |
+          echo "NPM_CONFIG_USERCONFIG=$NPM_CONFIG_USERCONFIG"
+          echo "NODE_AUTH_TOKEN=$NODE_AUTH_TOKEN"
+          echo "---- npmrc ----"
+          cat "$NPM_CONFIG_USERCONFIG"
+
+      - name: Trigger npm config parsing
+        run: node ./bin/npm-cli.js whoami || true
