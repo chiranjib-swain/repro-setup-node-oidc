@@ -24,7 +24,7 @@ jobs:
           path: npm-cli   # ← forked npm CLI lives here
 
       - name: Set up Node.js 24 with registry-url
-        uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
+        uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
