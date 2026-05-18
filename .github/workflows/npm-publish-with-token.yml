@@ -39,7 +39,7 @@ jobs:
 
       - name: Add project-level .npmrc to trigger the bug
         run: |
-          echo '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' >> package/.npmrc
+          printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' > package/.npmrc
           echo "--- package/.npmrc contents ---"
           cat package/.npmrc
 
