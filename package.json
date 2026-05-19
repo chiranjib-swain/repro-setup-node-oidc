@@ -17,5 +17,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/chiranjib-swain/repro-setup-node-oidc.git"
+  },
+  "packageManager": "pnpm@10.25.0",
+  "volta": {
+    "node": "24.14.1",
+    "pnpm": "10.25.0",
+    "npm": "11.11.0"
   }
 }
