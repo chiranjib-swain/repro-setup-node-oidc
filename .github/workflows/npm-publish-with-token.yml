@@ -1,55 +1,33 @@
-name: "Scenario D: 1477 User's PR Branch (No auth export) + project .npmrc (current state)"
+
+name: Test Publish (NODE_AUTH_TOKEN set blank in OIDC mode)
 
 on:
   workflow_dispatch:
 
 permissions:
+  id-token: write # Required for OIDC
   contents: read
-  id-token: write
 
 jobs:
-  test:
+  publish:
     runs-on: ubuntu-latest
+    environment: release
     steps:
-      - name: Checkout package
-        uses: actions/checkout@v4
-        with:
-          repository: chiranjib-swain/repro-setup-node-oidc
-          path: package
-
-      - name: Checkout patched npm-cli
-        uses: actions/checkout@v4
-        with:
-          repository: chiranjib-swain/npm-cli
-          ref: envReplace
-          path: npm-cli
-
-      - name: Setup node with PR#1477 branch (exports NO dummy/blank auth token)
-        uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
-        with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install patched npm
-        run: cd npm-cli && npm install && npm install -g .
-
-      - name: Add project .npmrc
-        run: |
-          printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' > package/.npmrc
-          echo "NODE_AUTH_TOKEN='$NODE_AUTH_TOKEN'"
-          echo "--- userconfig ---"
-          cat "$NPM_CONFIG_USERCONFIG"
-          echo "--- package .npmrc ---"
-          cat package/.npmrc
-
-      - name: Publish dry-run (XXXXX is truthy → passes noCreds, tokenChanged=false)
-        working-directory: package
-        run: npm publish --access public --dry-run --loglevel verbose 2>&1 | tee /tmp/publish.log
-        continue-on-error: true
-
-      - name: DETECT results
-        run: |
-          echo "=== DETECT lines ==="
-          grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines"
-          echo "=== Result ==="
-          grep -E 'tokenChanged|ENEEDAUTH|dry-run|E40' /tmp/publish.log || true
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    
+    - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+    
+    - name: Setup node with removes-dummy branch
+      uses: gowridurgad/setup-node@removes-dummy
+      with:
+        node-version: "24"
+        registry-url: "https://registry.npmjs.org"
+        package-manager-cache: false # Disable pnpm cache to avoid issues with authentication
+    
+    - run: pnpm install
+    - run: pnpm build
+    
+    - name: Publish
+      # env:
+        # NODE_AUTH_TOKEN: ""
+      run: pnpm publish --recursive --no-git-checks --verbose
