@@ -1,4 +1,4 @@
-name: "Scenario B: removes-dummy branch + project .npmrc (regression)"
+name: "Scenario C: setup-node@v6 (XXXXX) + project .npmrc (current state)"
 
 on:
   workflow_dispatch:
@@ -24,8 +24,8 @@ jobs:
           ref: envReplace
           path: npm-cli
 
-      - name: Setup node with removes-dummy branch
-        uses: gowridurgad/setup-node@removes-dummy
+      - name: Setup node with official v6 (exports XXXXX dummy)
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
@@ -42,14 +42,14 @@ jobs:
           echo "--- package .npmrc ---"
           cat package/.npmrc
 
-      - name: Publish (NO dry-run — ENEEDAUTH only throws in real mode)
+      - name: Publish dry-run (XXXXX is truthy → passes noCreds, tokenChanged=false)
         working-directory: package
-        run: npm publish --access public --loglevel verbose 2>&1 | tee /tmp/publish.log
+        run: npm publish --access public --dry-run --loglevel verbose 2>&1 | tee /tmp/publish.log
         continue-on-error: true
 
       - name: DETECT results
         run: |
           echo "=== DETECT lines ==="
           grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines"
-          echo "=== Error ==="
-          grep -E 'ENEEDAUTH|requires you to be logged in|tokenChanged|E40' /tmp/publish.log || true
+          echo "=== Result ==="
+          grep -E 'tokenChanged|ENEEDAUTH|dry-run|E40' /tmp/publish.log || true
