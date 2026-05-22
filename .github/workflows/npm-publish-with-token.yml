@@ -1,4 +1,4 @@
-name: "Scenario A: removes-dummy branch + no project .npmrc"
+name: "Scenario B: removes-dummy branch + project .npmrc (regression)"
 
 on:
   workflow_dispatch:
@@ -33,21 +33,23 @@ jobs:
       - name: Install patched npm
         run: cd npm-cli && npm install && npm install -g .
 
-      - name: Show state before publish
+      - name: Add project .npmrc
         run: |
+          printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' > package/.npmrc
           echo "NODE_AUTH_TOKEN='$NODE_AUTH_TOKEN'"
-          echo "--- userconfig ($NPM_CONFIG_USERCONFIG) ---"
+          echo "--- userconfig ---"
           cat "$NPM_CONFIG_USERCONFIG"
           echo "--- package .npmrc ---"
-          cat package/.npmrc 2>/dev/null || echo "(none)"
+          cat package/.npmrc
 
-      - name: Publish dry-run
+      - name: Publish (NO dry-run — ENEEDAUTH only throws in real mode)
         working-directory: package
-        run: npm publish --access public --dry-run --loglevel verbose 2>&1 | tee /tmp/publish.log
+        run: npm publish --access public --loglevel verbose 2>&1 | tee /tmp/publish.log
         continue-on-error: true
 
       - name: DETECT results
         run: |
+          echo "=== DETECT lines ==="
           grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines"
-          echo "---"
-          grep -E 'tokenChanged|ENEEDAUTH|dry-run|E40' /tmp/publish.log || true
+          echo "=== Error ==="
+          grep -E 'ENEEDAUTH|requires you to be logged in|tokenChanged|E40' /tmp/publish.log || true
