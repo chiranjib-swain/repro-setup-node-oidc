@@ -30,7 +30,7 @@ jobs:
           cat "$NPM_CONFIG_USERCONFIG"
       - name: Publish dry-run (token set HERE — later step pattern)
         working-directory: package
-        run: npm publish --access public --dry-run --loglevel verbose 2>&1 | tee /tmp/publish.log
+        run: npm publish --access public  --loglevel verbose 2>&1 | tee /tmp/publish.log
         continue-on-error: true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}   # set only on publish step
