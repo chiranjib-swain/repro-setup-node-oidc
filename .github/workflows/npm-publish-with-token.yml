@@ -1,54 +1,40 @@
-name: "Scenario B: removes-dummy branch + project .npmrc (regression)"
-
+name: "Scenario H: New fix + no OIDC + token in later step"
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-  id-token: write
-
+  # NO id-token: write — OIDC env vars will not be set
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout package
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: chiranjib-swain/repro-setup-node-oidc
           path: package
-
-      - name: Checkout patched npm-cli
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: chiranjib-swain/npm-cli
           ref: envReplace
           path: npm-cli
-
-      - name: Setup node with removes-dummy branch
-        uses: gowridurgad/setup-node@removes-dummy
+      - uses: chiranjib-swain/setup-node@oidc-fix-haritha
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Install patched npm
-        run: cd npm-cli && npm install && npm install -g .
-
-      # - name: Add project .npmrc
-      #   run: |
-      #     printf '//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n' > package/.npmrc
-      #     echo "NODE_AUTH_TOKEN='$NODE_AUTH_TOKEN'"
-      #     echo "--- userconfig ---"
-      #     cat "$NPM_CONFIG_USERCONFIG"
-      #     echo "--- package .npmrc ---"
-      #     cat package/.npmrc
-      - name: Publish (NO dry-run — ENEEDAUTH only throws in real mode)
+        # NODE_AUTH_TOKEN intentionally NOT set here
+      - run: cd npm-cli && npm install && npm install -g .
+      - name: Show state (NODE_AUTH_TOKEN should be absent/unset)
+        run: |
+          echo "NODE_AUTH_TOKEN='$NODE_AUTH_TOKEN'"
+          echo "--- userconfig (should have literal placeholder) ---"
+          cat "$NPM_CONFIG_USERCONFIG"
+      - name: Publish dry-run (token set HERE — later step pattern)
         working-directory: package
-        run: npm publish --access public --loglevel verbose 2>&1 | tee /tmp/publish.log
+        run: npm publish --access public --dry-run --loglevel verbose 2>&1 | tee /tmp/publish.log
         continue-on-error: true
-
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}   # set only on publish step
       - name: DETECT results
         run: |
-          echo "=== DETECT lines ==="
           grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines"
-          echo "=== Error ==="
-          grep -E 'ENEEDAUTH|requires you to be logged in|tokenChanged|E40' /tmp/publish.log || true
+          grep -E 'tokenChanged|ENEEDAUTH|dry-run|CI environment' /tmp/publish.log || true
