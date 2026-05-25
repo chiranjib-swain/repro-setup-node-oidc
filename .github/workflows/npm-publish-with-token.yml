@@ -17,7 +17,9 @@ jobs:
           repository: chiranjib-swain/npm-cli
           ref: envReplace
           path: npm-cli
-      - uses: chiranjib-swain/setup-node@oidc-fix-haritha
+      # - uses: chiranjib-swain/setup-node@oidc-fix-haritha
+      - name: Setup node with removes-dummy branch
+        uses: gowridurgad/setup-node@removes-dummy
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
