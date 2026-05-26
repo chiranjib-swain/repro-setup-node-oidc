@@ -30,6 +30,8 @@ jobs:
           echo "NODE_AUTH_TOKEN='$NODE_AUTH_TOKEN'"
           echo "--- userconfig (should have literal placeholder) ---"
           cat "$NPM_CONFIG_USERCONFIG"
+        continue-on-error: true
+        
       - name: Publish dry-run (token set HERE — later step pattern)
         working-directory: package
         run: npm publish --access public  --loglevel verbose 2>&1 | tee /tmp/publish.log
