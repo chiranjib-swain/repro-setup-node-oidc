@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  # NO id-token: write — OIDC env vars will not be set
+  id-token: write #— OIDC env vars will not be set
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -19,10 +19,10 @@ jobs:
           path: npm-cli
       # - uses: chiranjib-swain/setup-node@oidc-fix-haritha
       - name: Setup node with removes-dummy branch
-        uses: gowridurgad/setup-node@removes-dummy
+        uses: Satishchoudhary94/setup-node@fix/oidc-support-1440
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
+          # registry-url: 'https://registry.npmjs.org'
         # NODE_AUTH_TOKEN intentionally NOT set here
       - run: cd npm-cli && npm install && npm install -g .
       - name: Show state (NODE_AUTH_TOKEN should be absent/unset)
@@ -34,8 +34,8 @@ jobs:
         working-directory: package
         run: npm publish --access public  --loglevel verbose 2>&1 | tee /tmp/publish.log
         continue-on-error: true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}   # set only on publish step
+        # env:
+        #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}   # set only on publish step
       - name: DETECT results
         run: |
           grep '\[DETECT\]' /tmp/publish.log || echo "No DETECT lines"
